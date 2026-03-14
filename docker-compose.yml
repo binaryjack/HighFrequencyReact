@@ -1,0 +1,86 @@
+version: '3.8'
+
+services:
+  # OpenSearch
+  opensearch:
+    image: opensearchproject/opensearch:2.11.0
+    container_name: trading-opensearch
+    environment:
+      - discovery.type=single-node
+      - OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m
+      - DISABLE_SECURITY_PLUGIN=true
+      - "OPENSEARCH_INITIAL_ADMIN_PASSWORD=Admin123!"
+      - compatibility.override_main_response_version=true
+    ports:
+      - "9200:9200"
+      - "9600:9600"
+    volumes:
+      - opensearch-data:/usr/share/opensearch/data
+    networks:
+      - trading-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  # Data Seeder (runs once to populate OpenSearch)
+  seeder:
+    image: curlimages/curl:8.5.0
+    container_name: trading-seeder
+    depends_on:
+      opensearch:
+        condition: service_healthy
+    networks:
+      - trading-network
+    volumes:
+      - ./backend/seed-data.sh:/seed-data.sh:ro
+    command: sh /seed-data.sh
+    restart: "no"
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: trading-backend
+    depends_on:
+      opensearch:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:80
+      - OpenSearch__Uri=http://opensearch:9200
+      - OpenSearch__DefaultIndex=risk-aggregates
+    ports:
+      - "5000:80"
+    networks:
+      - trading-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost/api/RiskAggregates || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: trading-frontend
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+    networks:
+      - trading-network
+    environment:
+      - VITE_API_URL=http://localhost:5000
+
+networks:
+  trading-network:
+    driver: bridge
+
+volumes:
+  opensearch-data:
+    driver: local

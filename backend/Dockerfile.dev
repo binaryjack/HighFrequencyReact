@@ -1,0 +1,24 @@
+# Development Dockerfile with Hot Reload
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS development
+WORKDIR /src
+
+# Install dotnet watch tool
+RUN dotnet tool install --global dotnet-watch
+
+# Copy project files
+COPY src/TradingRisk.Domain/TradingRisk.Domain.csproj TradingRisk.Domain/
+COPY src/TradingRisk.Application/TradingRisk.Application.csproj TradingRisk.Application/
+COPY src/TradingRisk.Infrastructure/TradingRisk.Infrastructure.csproj TradingRisk.Infrastructure/
+COPY src/TradingRisk.API/TradingRisk.API.csproj TradingRisk.API/
+
+# Restore dependencies
+RUN dotnet restore TradingRisk.API/TradingRisk.API.csproj
+
+# Copy source code
+COPY src/ .
+
+EXPOSE 80
+EXPOSE 443
+
+# Use dotnet watch for hot reload
+CMD ["dotnet", "watch", "run", "--project", "TradingRisk.API/TradingRisk.API.csproj", "--urls", "http://+:80"]

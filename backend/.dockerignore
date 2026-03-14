@@ -1,0 +1,60 @@
+# Docker files
+**/Dockerfile
+**/docker-compose*.yml
+**/.dockerignore
+
+# Dependencies
+**/node_modules
+**/pnpm-lock.yaml
+**/package-lock.json
+**/yarn.lock
+
+# Build outputs
+**/dist
+**/build
+**/bin
+**/obj
+**/.next
+**/.nuxt
+
+# IDE
+**/.vs
+**/.vscode
+**/.idea
+**/*.suo
+**/*.user
+
+# OS
+**/.DS_Store
+**/Thumbs.db
+
+# Logs
+**/*.log
+**/logs
+
+# Environment
+**/.env
+**/.env.local
+**/.env.production.local
+
+# Git
+**/.git
+**/.gitignore
+
+# Documentation
+**/README.md
+**/ARCHITECTURE.md
+**/QUICKSTART.md
+**/DOCKER.md
+**/PROJECT_STRUCTURE.md
+
+# Test files
+**/*.test.ts
+**/*.spec.ts
+**/tests
+**/__tests__
+
+# CI/CD
+**/.github
+**/.gitlab-ci.yml
+**/azure-pipelines.yml

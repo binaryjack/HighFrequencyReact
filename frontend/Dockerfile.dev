@@ -1,0 +1,20 @@
+# Development Dockerfile with Hot Reload
+FROM node:18-alpine AS development
+WORKDIR /app
+
+# Install pnpm
+RUN npm install -g pnpm@8.15.0
+
+# Copy package files
+COPY package.json ./
+
+# Install dependencies
+RUN pnpm install
+
+# Copy source code
+COPY . .
+
+EXPOSE 5173
+
+# Run dev server with hot reload
+CMD ["pnpm", "dev", "--host", "0.0.0.0"]

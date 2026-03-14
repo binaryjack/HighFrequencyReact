@@ -1,0 +1,88 @@
+# Development Docker Compose with Hot Reload
+version: '3.8'
+
+services:
+  # OpenSearch
+  opensearch:
+    image: opensearchproject/opensearch:2.11.0
+    container_name: trading-opensearch-dev
+    environment:
+      - discovery.type=single-node
+      - OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m
+      - DISABLE_SECURITY_PLUGIN=true
+      - "OPENSEARCH_INITIAL_ADMIN_PASSWORD=Admin123!"
+    ports:
+      - "9200:9200"
+      - "9600:9600"
+    volumes:
+      - opensearch-data-dev:/usr/share/opensearch/data
+    networks:
+      - trading-network-dev
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  # Data Seeder
+  seeder:
+    image: curlimages/curl:8.5.0
+    container_name: trading-seeder-dev
+    depends_on:
+      opensearch:
+        condition: service_healthy
+    networks:
+      - trading-network-dev
+    volumes:
+      - ./backend/seed-data.sh:/seed-data.sh:ro
+    command: sh /seed-data.sh
+    restart: "no"
+
+  # Backend API (Development Mode with Hot Reload)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: trading-backend-dev
+    depends_on:
+      opensearch:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:80
+      - OpenSearch__Uri=http://opensearch:9200
+      - OpenSearch__DefaultIndex=risk-aggregates
+    ports:
+      - "5000:80"
+      - "5001:443"
+    volumes:
+      - ./backend/src:/src:cached
+    networks:
+      - trading-network-dev
+
+  # Frontend (Development Mode with Hot Reload)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: trading-frontend-dev
+    depends_on:
+      - backend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend/src:/app/src:cached
+      - ./frontend/public:/app/public:cached
+      - /app/node_modules
+    networks:
+      - trading-network-dev
+    environment:
+      - VITE_API_URL=http://localhost:5000/api
+
+networks:
+  trading-network-dev:
+    driver: bridge
+
+volumes:
+  opensearch-data-dev:
+    driver: local
